@@ -1,0 +1,5 @@
+bin/
+.terraform/
+terraform
+*.exe
+deploy

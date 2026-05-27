@@ -1,0 +1,46 @@
+# Agent Engine deployment ignore file
+# Exclude local environment secrets, caches, and test scripts
+
+# Environment Secrets
+.env
+.env.*
+
+# Python Cache & Build Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Local Testing & Documentation
+run_test.py
+testing.md
+walkthrough.md
+task.md
+implementation_plan.md
+
+# Version Control
+.git/
+.gitignore
+.gitattributes
+
+# Added by Agent Engine Deployer Skill (Hybrid Analysis)
+*.pkl
+*.zip
+.ds_store
+.git
+.idea
+.terraform
+.terraform.lock.hcl
+.venv
+.vscode
+__pycache__
+deploy
+env
+schema.json
+venv

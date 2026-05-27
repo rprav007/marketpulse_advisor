@@ -1,0 +1,14 @@
+# Project dependencies for MarketPulse Advisor Multi-Agent System
+
+# Google ADK and Generative AI SDKs
+google-adk==2.0.0
+google-genai==1.75.0
+google-auth>=2.0.0
+
+# Database & Cloud Integration
+firebase-admin>=6.0.0
+
+# External Brokerage & Market APIs
+alpaca-py>=0.30.0
+requests>=2.31.0
+pydantic>=2.0.0

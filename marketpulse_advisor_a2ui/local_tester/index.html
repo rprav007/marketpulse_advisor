@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketPulse Advisor A2UI Terminal</title>
+    <!-- Modern Typography and Material Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Theme variables: Dark Mode by default */
+            --bg-color: #080c14;
+            --container-bg: rgba(13, 20, 35, 0.85);
+            --card-bg: rgba(22, 33, 58, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --primary-hover: #60a5fa;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --warning: #f59e0b;
+            --input-bg: #0b1329;
+            --scroll-thumb: rgba(255, 255, 255, 0.15);
+            
+            --chat-system-bg: rgba(255, 255, 255, 0.05);
+            --chat-agent-bg: rgba(30, 41, 59, 0.8);
+            --chat-user-bg: linear-gradient(135deg, #2563eb, #1d4ed8);
+            
+            --glass-blur: blur(16px);
+            --transition-speed: 0.25s;
+        }
+
+        body.light-theme {
+            --bg-color: #f1f5f9;
+            --container-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.2);
+            --primary-hover: #1d4ed8;
+            --success: #059669;
+            --success-glow: rgba(5, 150, 105, 0.15);
+            --danger: #dc2626;
+            --danger-glow: rgba(220, 38, 38, 0.15);
+            --warning: #d97706;
+            --input-bg: #f8fafc;
+            --scroll-thumb: rgba(0, 0, 0, 0.15);
+            
+            --chat-system-bg: rgba(0, 0, 0, 0.04);
+            --chat-agent-bg: #f8fafc;
+            --chat-user-bg: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background var(--transition-speed) ease;
+        }
+
+        /* Ambient glow in background for dark theme */
+        body::before {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+            top: 10%;
+            left: 15%;
+            z-index: -1;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+        body::after {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            bottom: 10%;
+            right: 15%;
+            z-index: -1;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            height: 85vh;
+            background: var(--container-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--text-color) 30%, var(--primary-hover) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .session-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar */
+        .chat-box::-webkit-scrollbar, pre::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .chat-box::-webkit-scrollbar-track, pre::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-box::-webkit-scrollbar-thumb, pre::-webkit-scrollbar-thumb {
+            background: var(--scroll-thumb);
+            border-radius: 4px;
+        }
+
+        /* Message Layouts */
+        .message-row {
+            display: flex;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .message-row.user {
+            justify-content: flex-end;
+        }
+        
+        .message-row.agent {
+            justify-content: flex-start;
+        }
+
+        .message-row.system {
+            justify-content: center;
+        }
+
+        .bubble {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .user .bubble {
+            background: var(--chat-user-bg);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .agent .bubble {
+            background: var(--chat-agent-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .system .bubble {
+            background: var(--chat-system-bg);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            letter-spacing: 0.02em;
+        }
+
+        .sender-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .user .sender-name {
+            justify-content: flex-end;
+        }
+
+        /* Input Controls */
+        .input-area {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all var(--transition-speed) ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-icon {
+            font-size: 1.2rem !important;
+        }
+
+        .btn-theme {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+        .btn-theme:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Rich UI Widgets --- */
+        .widget-wrapper {
+            margin-top: 14px;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            background: var(--card-bg);
+            padding: 20px;
+            box-shadow: var(--glass-shadow);
+            transition: all var(--transition-speed) ease;
+            width: 100%;
+        }
+
+        .widget-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Tabs Component */
+        .tabs-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .tab-headers {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 16px;
+            overflow-x: auto;
+            gap: 8px;
+        }
+
+        .tab-button {
+            padding: 10px 18px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all var(--transition-speed) ease;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            color: var(--text-color);
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-panel {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Form Components */
+        .input-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        select, input[type="date"], input[type="time"], input[type="datetime-local"] {
+            padding: 10px 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            outline: none;
+            font-family: inherit;
+            transition: all var(--transition-speed) ease;
+            width: 100%;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Grid / Flex Layout helpers */
+        .row-layout {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .col-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Premium Card Component styling */
+        .ui-card {
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ui-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(59, 130, 246, 0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        /* Badges and confirmation status alerts */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-success {
+            background: var(--success-glow);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-danger {
+            background: var(--danger-glow);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Details / Raw JSON Output styling */
+        details {
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        summary {
+            cursor: pointer;
+            color: var(--primary-hover);
+            font-weight: 600;
+            font-size: 0.85rem;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #a7f3d0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pulse Micro-animations */
+        .pulse {
+            animation: pulse-ring 2s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span class="material-icons" style="font-size: 1.8rem; vertical-align: middle;">query_stats</span> MarketPulse Advisor Terminal</h1>
+            <div class="header-actions">
+                <button onclick="toggleTheme()" class="btn-theme" title="Toggle Theme">
+                    <span id="theme-icon" class="material-icons">light_mode</span>
+                </button>
+                <div class="session-info">
+                    <span class="material-icons" style="font-size: 1rem;">vpn_key</span>
+                    <span id="session-id-display">Generating...</span>
+                </div>
+                <button onclick="startNewSession()" class="btn" style="background: var(--danger); padding: 8px 12px; border-radius: 10px; font-size: 0.85rem;">
+                    <span class="material-icons" style="font-size: 1.1rem;">refresh</span> Reset
+                </button>
+            </div>
+        </div>
+        
+        <div class="chat-box" id="chat"></div>
+        
+        <div class="input-area">
+            <div class="input-group">
+                <input type="text" id="input" placeholder="Type scanner requests (e.g. 'Perform the pre-market scan for user_happy')...">
+                <button onclick="sendMessage()" class="btn">
+                    <span>Send</span> <span class="material-icons btn-icon">send</span>
+                </button>
+            </div>
+            
+            <details>
+                <summary><span class="material-icons" style="font-size: 1rem;">code</span> Inspect Last A2UI JSON Transaction</summary>
+                <pre id="json-dump">No UI transactions captured yet.</pre>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        let dataModel = {};
+        let sessionId = generateSessionId();
+
+        function generateSessionId() {
+            return 'sess_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function updateSessionDisplay() {
+            document.getElementById('session-id-display').innerText = sessionId;
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const isLight = body.classList.toggle('light-theme');
+            document.getElementById('theme-icon').innerText = isLight ? 'dark_mode' : 'light_mode';
+        }
+
+        function startNewSession() {
+            sessionId = generateSessionId();
+            updateSessionDisplay();
+            dataModel = {};
+            document.getElementById('chat').innerHTML = '';
+            appendMessage('System', 'System initialized. Ready for trading execution.', 'system');
+            document.getElementById('json-dump').innerText = 'No UI transactions captured yet.';
+        }
+
+        // Initialize layout on load
+        updateSessionDisplay();
+        appendMessage('System', 'Terminal connection established. Enter your query to run the agent scanner pipeline.', 'system');
+
+        // Enter key listener
+        document.getElementById('input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const text = input.value;
+            if (!text.trim()) return;
+            input.value = '';
+            
+            appendMessage('User', text, 'user');
+            await sendPayload({ message: { text: text } });
+        }
+
+        async function sendUserAction(userAction, messageText) {
+            appendMessage('User', messageText, 'user');
+            
+            const payload = {
+                message: {
+                    text: messageText,
+                    parts: [
+                        {
+                            data: { userAction: userAction },
+                            metadata: { mimeType: 'application/json+a2ui' }
+                        }
+                    ]
+                }
+            };
+            
+            await sendPayload(payload);
+        }
+
+        async function sendPayload(params) {
+            const loadingDiv = appendMessage('System', 'Querying MarketPulse Supervisor Agents...', 'system');
+            try {
+                const response = await fetch('/jsonrpc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'message/send',
+                        params: { ...params, session_id: sessionId },
+                        id: Date.now()
+                    })
+                });
+                
+                const data = await response.json();
+                loadingDiv.remove();
+                handleResponse(data);
+            } catch (error) {
+                loadingDiv.remove();
+                appendMessage('Error', `Network Exception: ${error.message}`, 'system');
+            }
+        }
+
+        function appendMessage(sender, text, role) {
+            const chat = document.getElementById('chat');
+            
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+            
+            const contentWrap = document.createElement('div');
+            contentWrap.style.display = 'flex';
+            contentWrap.style.flexDirection = 'column';
+            contentWrap.style.maxWidth = '85%';
+            
+            if (role !== 'system') {
+                const nameEl = document.createElement('div');
+                nameEl.className = 'sender-name';
+                const icon = role === 'user' ? 'person' : 'smart_toy';
+                nameEl.innerHTML = `<span class="material-icons" style="font-size: 0.95rem;">${icon}</span> ${sender}`;
+                contentWrap.appendChild(nameEl);
+            }
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            // Format text with safe linebreaks
+            bubble.innerHTML = text.replace(/\n/g, '<br>');
+            contentWrap.appendChild(bubble);
+            row.appendChild(contentWrap);
+            
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+            return row;
+        }
+
+        let currentRootId = null;
+
+        function handleResponse(data) {
+            if (data.error) {
+                appendMessage('Error', data.error.message, 'system');
+                return;
+            }
+            
+            const parts = data.result.message.parts;
+            
+            // Extract root ID first
+            for (const part of parts) {
+                if (part.data && part.metadata && part.metadata.mimeType === 'application/json+a2ui') {
+                    const uiData = part.data;
+                    if (uiData.beginRendering) {
+                        currentRootId = uiData.beginRendering.root;
+                    }
+                }
+            }
+            
+            for (const part of parts) {
+                if (part.text) {
+                    appendMessage('Agent', part.text, 'agent');
+                }
+                if (part.data && part.metadata && part.metadata.mimeType === 'application/json+a2ui') {
+                    const uiData = part.data;
+                    console.log("A2UI Data Payload:", uiData);
+                    
+                    // Handle Data Model Updates
+                    if (uiData.dataModelUpdate) {
+                        const contents = uiData.dataModelUpdate.contents || [];
+                        for (const item of contents) {
+                            dataModel[item.key] = item.valueString || item.valueNumber || item.valueBoolean;
+                        }
+                    }
+                    
+                    // Handle Surface Updates (Rendering)
+                    if (uiData.surfaceUpdate) {
+                        document.getElementById('json-dump').innerText = JSON.stringify(uiData, null, 2);
+                        const rootToUse = uiData.surfaceUpdate.root || currentRootId;
+                        renderUI(uiData.surfaceUpdate, rootToUse);
+                    }
+                }
+            }
+        }
+
+        function renderUI(surfaceUpdate, rootId) {
+            const chat = document.getElementById('chat');
+            const row = document.createElement('div');
+            row.className = 'message-row agent';
+            
+            const wrap = document.createElement('div');
+            wrap.className = 'widget-wrapper';
+            wrap.innerHTML = '<div class="widget-title"><span class="material-icons text-primary">dashboard</span> Interactive Advisor Dashboard</div>';
+            
+            const components = surfaceUpdate.components;
+            
+            if (rootId && components) {
+                const rendered = renderComponent(rootId, components);
+                if (rendered) {
+                    wrap.appendChild(rendered);
+                }
+            }
+            
+            row.appendChild(wrap);
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function renderComponent(componentId, components) {
+            console.log("Resolving component ID:", componentId);
+            const compWrapper = components.find(c => c.id === componentId);
+            if (!compWrapper) {
+                console.warn("Component reference not found in registry:", componentId);
+                return document.createTextNode(`[Reference Error: ${componentId}]`);
+            }
+            
+            const comp = compWrapper.component;
+            
+            if (comp.Text) {
+                const el = document.createElement('div');
+                let rawText = "";
+                if (comp.Text.text) {
+                    if (comp.Text.text.literalString) {
+                        rawText = comp.Text.text.literalString;
+                    } else if (comp.Text.text.path) {
+                        rawText = dataModel[comp.Text.text.path] || "";
+                    }
+                }
+                el.innerText = rawText;
+                
+                // Set usageHint styling
+                const hint = comp.Text.usageHint || 'body';
+                if (hint === 'h1') {
+                    el.style.fontSize = '1.8rem';
+                    el.style.fontWeight = '700';
+                    el.style.fontFamily = 'Outfit, sans-serif';
+                    el.style.margin = '10px 0';
+                } else if (hint === 'h2') {
+                    el.style.fontSize = '1.4rem';
+                    el.style.fontWeight = '600';
+                    el.style.fontFamily = 'Outfit, sans-serif';
+                    el.style.margin = '8px 0';
+                } else if (hint === 'h3') {
+                    el.style.fontSize = '1.15rem';
+                    el.style.fontWeight = '600';
+                    el.style.margin = '6px 0';
+                } else if (hint === 'h4') {
+                    el.style.fontSize = '1rem';
+                    el.style.fontWeight = '600';
+                } else if (hint === 'h5') {
+                    el.style.fontSize = '0.9rem';
+                    el.style.fontWeight = '600';
+                } else if (hint === 'caption') {
+                    el.style.fontSize = '0.75rem';
+                    el.style.color = 'var(--text-muted)';
+                } else {
+                    el.style.fontSize = '0.9rem';
+                    el.style.lineHeight = '1.4';
+                }
+                return el;
+            }
+            
+            if (comp.Card) {
+                const div = document.createElement('div');
+                div.className = 'ui-card';
+                if (comp.Card.child) {
+                    div.appendChild(renderComponent(comp.Card.child, components));
+                }
+                return div;
+            }
+            
+            if (comp.Column) {
+                const div = document.createElement('div');
+                div.className = 'col-layout';
+                
+                const align = comp.Column.alignment;
+                if (align) {
+                    if (align === 'center') div.style.alignItems = 'center';
+                    else if (align === 'end') div.style.alignItems = 'flex-end';
+                    else if (align === 'start') div.style.alignItems = 'flex-start';
+                    else if (align === 'stretch') div.style.alignItems = 'stretch';
+                }
+                
+                const dist = comp.Column.distribution;
+                if (dist) {
+                    if (dist === 'center') div.style.justifyContent = 'center';
+                    else if (dist === 'spaceBetween') div.style.justifyContent = 'space-between';
+                    else if (dist === 'spaceAround') div.style.justifyContent = 'space-around';
+                }
+                
+                const children = comp.Column.children.explicitList || [];
+                for (const childId of children) {
+                    div.appendChild(renderComponent(childId, components));
+                }
+                return div;
+            }
+            
+            if (comp.Row) {
+                const div = document.createElement('div');
+                div.className = 'row-layout';
+                
+                const align = comp.Row.alignment;
+                if (align) {
+                    if (align === 'center') div.style.alignItems = 'center';
+                    else if (align === 'end') div.style.alignItems = 'flex-end';
+                    else if (align === 'start') div.style.alignItems = 'flex-start';
+                    else if (align === 'stretch') div.style.alignItems = 'stretch';
+                }
+                
+                const dist = comp.Row.distribution;
+                if (dist) {
+                    if (dist === 'center') div.style.justifyContent = 'center';
+                    else if (dist === 'spaceAround') div.style.justifyContent = 'space-around';
+                    else if (dist === 'spaceBetween') div.style.justifyContent = 'space-between';
+                }
+                
+                const children = comp.Row.children.explicitList || [];
+                for (const childId of children) {
+                    div.appendChild(renderComponent(childId, components));
+                }
+                return div;
+            }
+            
+            if (comp.List) {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.gap = '10px';
+                
+                const direction = comp.List.direction || 'vertical';
+                if (direction === 'horizontal') {
+                    div.style.flexDirection = 'row';
+                    div.style.overflowX = 'auto';
+                    div.style.width = '100%';
+                    div.style.paddingBottom = '8px';
+                } else {
+                    div.style.flexDirection = 'column';
+                }
+                
+                const align = comp.List.alignment;
+                if (align) {
+                    if (align === 'center') div.style.alignItems = 'center';
+                    else if (align === 'end') div.style.alignItems = 'flex-end';
+                    else if (align === 'start') div.style.alignItems = 'flex-start';
+                    else if (align === 'stretch') div.style.alignItems = 'stretch';
+                }
+                
+                if (comp.List.children) {
+                    if (comp.List.children.explicitList) {
+                        const children = comp.List.children.explicitList;
+                        for (const childId of children) {
+                            div.appendChild(renderComponent(childId, components));
+                        }
+                    }
+                }
+                return div;
+            }
+            
+            if (comp.Divider) {
+                const hr = document.createElement('div');
+                if (comp.Divider.axis === 'vertical') {
+                    hr.style.width = '1px';
+                    hr.style.height = '100%';
+                    hr.style.background = 'var(--border-color)';
+                    hr.style.margin = '0 12px';
+                    hr.style.alignSelf = 'stretch';
+                } else {
+                    hr.style.height = '1px';
+                    hr.style.width = '100%';
+                    hr.style.background = 'var(--border-color)';
+                    hr.style.margin = '12px 0';
+                }
+                return hr;
+            }
+
+            if (comp.Image) {
+                const img = document.createElement('img');
+                img.style.borderRadius = '8px';
+                let urlStr = "";
+                if (comp.Image.url) {
+                    if (comp.Image.url.literalString) {
+                        urlStr = comp.Image.url.literalString;
+                    } else if (comp.Image.url.path) {
+                        urlStr = dataModel[comp.Image.url.path] || "";
+                    }
+                }
+                img.src = urlStr;
+                
+                const hint = comp.Image.usageHint || 'mediumFeature';
+                if (hint === 'icon') {
+                    img.style.width = '24px';
+                    img.style.height = '24px';
+                } else if (hint === 'avatar') {
+                    img.style.width = '40px';
+                    img.style.height = '40px';
+                    img.style.borderRadius = '50%';
+                } else if (hint === 'smallFeature') {
+                    img.style.width = '120px';
+                } else if (hint === 'mediumFeature') {
+                    img.style.width = '240px';
+                } else if (hint === 'largeFeature') {
+                    img.style.width = '100%';
+                    img.style.maxHeight = '280px';
+                } else if (hint === 'header') {
+                    img.style.width = '100%';
+                    img.style.height = '140px';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '12px 12px 0 0';
+                }
+                
+                if (comp.Image.fit) {
+                    img.style.objectFit = comp.Image.fit;
+                }
+                return img;
+            }
+
+            if (comp.Icon) {
+                const i = document.createElement('span');
+                i.className = 'material-icons';
+                let iconName = "";
+                if (comp.Icon.name) {
+                    if (comp.Icon.name.literalString) {
+                        iconName = comp.Icon.name.literalString;
+                    } else if (comp.Icon.name.path) {
+                        iconName = dataModel[comp.Icon.name.path] || "";
+                    }
+                }
+                // Map camelCase to snake_case Material Icons names
+                const snakeCaseMap = {
+                    accountCircle: 'account_circle',
+                    arrowBack: 'arrow_back',
+                    arrowForward: 'arrow_forward',
+                    attachFile: 'attach_file',
+                    calendarToday: 'calendar_today',
+                    favoriteOff: 'favorite_border',
+                    locationOn: 'location_on',
+                    lockOpen: 'lock_open',
+                    moreVert: 'more_vert',
+                    moreHoriz: 'more_horiz',
+                    notificationsOff: 'notifications_off',
+                    shoppingCart: 'shopping_cart',
+                    starHalf: 'star_half',
+                    starOff: 'star_border',
+                    visibilityOff: 'visibility_off'
+                };
+                i.innerText = snakeCaseMap[iconName] || iconName;
+                i.style.verticalAlign = 'middle';
+                return i;
+            }
+
+            if (comp.Tabs) {
+                const tabsDiv = document.createElement('div');
+                tabsDiv.className = 'tabs-container';
+
+                const tabHeadersDiv = document.createElement('div');
+                tabHeadersDiv.className = 'tab-headers';
+
+                const tabContentDiv = document.createElement('div');
+                tabContentDiv.className = 'tab-content';
+
+                const tabItems = comp.Tabs.tabItems || [];
+                const tabButtons = [];
+                const tabContents = [];
+
+                tabItems.forEach((tabItem, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'tab-button' + (idx === 0 ? ' active' : '');
+                    
+                    let titleStr = "";
+                    if (tabItem.title) {
+                        if (tabItem.title.literalString) {
+                            titleStr = tabItem.title.literalString;
+                        } else if (tabItem.title.path) {
+                            titleStr = dataModel[tabItem.title.path] || "";
+                        }
+                    }
+                    btn.innerText = titleStr;
+
+                    // Tab child rendering
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'tab-panel';
+                    childContainer.style.display = idx === 0 ? 'block' : 'none';
+                    
+                    if (tabItem.child) {
+                        const renderedChild = renderComponent(tabItem.child, components);
+                        if (renderedChild) childContainer.appendChild(renderedChild);
+                    }
+
+                    btn.onclick = () => {
+                        tabButtons.forEach((b, bIdx) => {
+                            if (bIdx === idx) b.classList.add('active');
+                            else b.classList.remove('active');
+                        });
+                        tabContents.forEach((c, cIdx) => {
+                            c.style.display = cIdx === idx ? 'block' : 'none';
+                        });
+                    };
+
+                    tabHeadersDiv.appendChild(btn);
+                    tabButtons.push(btn);
+                    
+                    tabContentDiv.appendChild(childContainer);
+                    tabContents.push(childContainer);
+                });
+
+                tabsDiv.appendChild(tabHeadersDiv);
+                tabsDiv.appendChild(tabContentDiv);
+                return tabsDiv;
+            }
+            
+            if (comp.Button) {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                if (comp.Button.primary === false) {
+                    btn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    btn.style.border = '1px solid var(--border-color)';
+                    btn.style.color = 'var(--text-color)';
+                }
+                
+                if (comp.Button.child) {
+                    const childComp = components.find(c => c.id === comp.Button.child);
+                    if (childComp && childComp.component.Text) {
+                        btn.innerText = childComp.component.Text.text.literalString || "";
+                    } else {
+                        btn.innerText = comp.Button.child;
+                    }
+                }
+                
+                if (comp.Button.action) {
+                    btn.onclick = () => {
+                        const actionObj = comp.Button.action;
+                        const context = actionObj.context || [];
+                        
+                        const msgItem = context.find(i => i.key === 'message');
+                        let msgText = "Dispatched A2UI client action: " + actionObj.name;
+                        if (msgItem) {
+                            msgText = msgItem.value.literalString || msgText;
+                        }
+                        
+                        // Assemble context variables
+                        const contextMap = {};
+                        for (const item of context) {
+                            const key = item.key;
+                            const valObj = item.value;
+                            let val = "";
+                            if (valObj.literalString !== undefined) {
+                                val = valObj.literalString;
+                            } else if (valObj.literalNumber !== undefined) {
+                                val = valObj.literalNumber;
+                            } else if (valObj.literalBoolean !== undefined) {
+                                val = valObj.literalBoolean;
+                            } else if (valObj.path) {
+                                val = dataModel[valObj.path] || "";
+                            }
+                            contextMap[key] = val;
+                        }
+                        
+                        const userAction = {
+                            name: actionObj.name,
+                            context: contextMap
+                        };
+                        
+                        sendUserAction(userAction, msgText);
+                    };
+                }
+                return btn;
+            }
+            
+            if (comp.MultipleChoice) {
+                const mc = comp.MultipleChoice;
+                const container = document.createElement('div');
+                container.style.width = '100%';
+                
+                const select = document.createElement('select');
+                if (mc.selections && mc.selections.path) {
+                    select.id = mc.selections.path + "_select";
+                }
+                
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = "";
+                emptyOpt.innerText = "Select Option...";
+                select.appendChild(emptyOpt);
+                
+                const options = mc.options || [];
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.innerText = opt.label.literalString || opt.value;
+                    select.appendChild(option);
+                });
+                
+                if (mc.selections && mc.selections.path) {
+                    const path = mc.selections.path;
+                    select.onchange = (e) => {
+                        dataModel[path] = e.target.value;
+                        console.log(`Updated model path: ${path} = ${e.target.value}`);
+                    };
+                }
+                
+                container.appendChild(select);
+                return container;
+            }
+
+            if (comp.DateTimeInput) {
+                const input = document.createElement('input');
+                const dt = comp.DateTimeInput;
+                if (dt.enableDate === false && dt.enableTime === true) {
+                    input.type = 'time';
+                } else if (dt.enableDate === true && dt.enableTime === false) {
+                    input.type = 'date';
+                } else {
+                    input.type = 'datetime-local';
+                }
+                
+                if (dt.value && dt.value.path) {
+                    const path = dt.value.path;
+                    input.id = path + "_datetime";
+                    input.value = dataModel[path] || "";
+                    input.oninput = (e) => {
+                        dataModel[path] = e.target.value;
+                    };
+                }
+                return input;
+            }
+            
+            if (comp.CheckBox) {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '8px';
+                
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.style.width = '18px';
+                input.style.height = '18px';
+                input.style.cursor = 'pointer';
+                
+                const label = document.createElement('label');
+                label.innerText = comp.CheckBox.label.literalString || "";
+                label.style.fontSize = '0.9rem';
+                label.style.cursor = 'pointer';
+                
+                div.appendChild(input);
+                div.appendChild(label);
+                
+                if (comp.CheckBox.value && comp.CheckBox.value.path) {
+                    const path = comp.CheckBox.value.path;
+                    input.id = path + "_check";
+                    input.checked = dataModel[path] || false;
+                    input.onchange = (e) => {
+                        dataModel[path] = e.target.checked;
+                    };
+                }
+                return div;
+            }
+            
+            if (comp.Slider) {
+                const div = document.createElement('div');
+                div.className = 'col-layout';
+                
+                const label = document.createElement('label');
+                label.className = 'input-label';
+                label.innerText = `Slider Value: `;
+                const span = document.createElement('span');
+                span.style.fontWeight = 'bold';
+                span.style.color = 'var(--primary)';
+                span.innerText = dataModel[comp.Slider.value.path] || comp.Slider.minValue || 0;
+                label.appendChild(span);
+                
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = comp.Slider.minValue || 0;
+                input.max = comp.Slider.maxValue || 100;
+                input.value = dataModel[comp.Slider.value.path] || 0;
+                input.style.width = '100%';
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                
+                if (comp.Slider.value && comp.Slider.value.path) {
+                    const path = comp.Slider.value.path;
+                    input.id = path + "_slider";
+                    input.oninput = (e) => {
+                        span.innerText = e.target.value;
+                        dataModel[path] = parseInt(e.target.value);
+                    };
+                }
+                return div;
+            }
+            
+            if (comp.TextField) {
+                const div = document.createElement('div');
+                div.className = 'col-layout';
+                
+                const label = document.createElement('label');
+                label.className = 'input-label';
+                label.innerText = comp.TextField.label.literalString || "";
+                
+                const input = document.createElement('input');
+                input.type = comp.TextField.textFieldType === 'obscured' ? 'password' : 'text';
+                input.placeholder = 'Enter value...';
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                
+                if (comp.TextField.text && comp.TextField.text.path) {
+                    const path = comp.TextField.text.path;
+                    input.id = path + "_textinput";
+                    input.value = dataModel[path] || "";
+                    input.oninput = (e) => {
+                        dataModel[path] = e.target.value;
+                    };
+                }
+                return div;
+            }
+            
+            // Fallback rendering
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.style.border = '1px dashed var(--warning)';
+            fallbackDiv.style.padding = '12px';
+            fallbackDiv.style.borderRadius = '8px';
+            fallbackDiv.style.background = 'rgba(245, 158, 11, 0.08)';
+            fallbackDiv.style.color = 'var(--warning)';
+            fallbackDiv.style.fontSize = '0.85rem';
+            
+            const type = Object.keys(comp)[0] || "Unknown";
+            fallbackDiv.innerHTML = `<strong style="text-transform: uppercase;">[${type}]</strong> Component placeholder: <code>${componentId}</code>`;
+            return fallbackDiv;
+        }
+    </script>
+</body>
+</html>
