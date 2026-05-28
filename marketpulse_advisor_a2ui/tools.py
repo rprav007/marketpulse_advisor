@@ -75,119 +75,204 @@ def get_market_scans(tool_context: ToolContext) -> dict:
     real_time_mode = os.environ.get("REAL_TIME_MODE", "false").lower() == "true"
     mock_mode = os.environ.get("MOCK_MODE", "True").lower() == "true"
 
-    # The 15 symbols across 4 sectors
-    symbols = ["AAPL", "NVDA", "MSFT", "AVGO", "META", "GOOGL", "AMZN", "TSLA", "NKE", "SBUX", "JPM", "BAC", "MS", "LLY", "UNH"]
+    # The 77 symbols from volume_breakout_scanner.py
+    symbols = [
+        "NVDA", "MSFT", "GOOG", "GOOGL", "META", "AAPL", "AMZN", "TSLA", "AVGO", "ORCL",
+        "MU", "MRVL", "AMD", "ALAB", "CRDO", "ANET", "TSM", "ASML", "QCOM", "TXN", "INTC",
+        "DDOG", "SNOW", "CRWD", "PLTR", "ZS", "NET", "MDB", "NOW", "ADBE", "INTU",
+        "NFLX", "DIS", "ROKU", "JPM", "BAC", "GS", "WFC", "COIN", "HOOD", "MS", "C",
+        "BLK", "AXP", "V", "MA", "BA", "LMT", "RTX", "NOC", "CAT", "GE", "DE", "HON",
+        "MMM", "UNP", "XOM", "CVX", "OXY", "EOG", "SLB", "COP", "MPC", "LLY", "NVO",
+        "ABBV", "UNH", "JNJ", "PFE", "MRK", "TMO", "ABT", "DHR", "WMT", "HD", "COST",
+        "MCD", "NKE", "TGT", "SBUX", "LOW", "KO", "PG", "PEP", "GEV", "CEG", "VST",
+        "NEE", "MSTR", "MARA", "RIOT", "FCX", "NEM", "GLD", "B", "UBER", "LYFT",
+        "DAL", "RCL"
+    ]
+    # Remove duplicates
+    symbols = list(sorted(list(set(symbols))))
+
+    # Dynamic Sector mapping to our 4 tabs
     sector_map = {
-        "AAPL": "Tech", "NVDA": "Tech", "MSFT": "Tech", "AVGO": "Tech", "META": "Tech", "GOOGL": "Tech",
-        "AMZN": "Consumer Disc.", "TSLA": "Consumer Disc.", "NKE": "Consumer Disc.", "SBUX": "Consumer Disc.",
-        "JPM": "Financials", "BAC": "Financials", "MS": "Financials",
-        "LLY": "Healthcare", "UNH": "Healthcare"
+        # Tech
+        "NVDA": "Tech", "MSFT": "Tech", "GOOG": "Tech", "GOOGL": "Tech", "META": "Tech",
+        "AAPL": "Tech", "AMZN": "Tech", "TSLA": "Tech", "AVGO": "Tech", "ORCL": "Tech",
+        "MU": "Tech", "MRVL": "Tech", "AMD": "Tech", "ALAB": "Tech", "CRDO": "Tech",
+        "ANET": "Tech", "TSM": "Tech", "ASML": "Tech", "QCOM": "Tech", "TXN": "Tech",
+        "INTC": "Tech", "DDOG": "Tech", "SNOW": "Tech", "CRWD": "Tech", "PLTR": "Tech",
+        "ZS": "Tech", "NET": "Tech", "MDB": "Tech", "NOW": "Tech", "ADBE": "Tech",
+        "INTU": "Tech", "NFLX": "Tech", "DIS": "Tech", "ROKU": "Tech", "MSTR": "Tech",
+        "MARA": "Tech", "RIOT": "Tech",
+        
+        # Consumer Disc
+        "WMT": "Consumer Disc.", "HD": "Consumer Disc.", "COST": "Consumer Disc.",
+        "MCD": "Consumer Disc.", "NKE": "Consumer Disc.", "TGT": "Consumer Disc.",
+        "SBUX": "Consumer Disc.", "LOW": "Consumer Disc.", "UBER": "Consumer Disc.",
+        "LYFT": "Consumer Disc.", "DAL": "Consumer Disc.", "RCL": "Consumer Disc.",
+        "GEV": "Consumer Disc.", "CEG": "Consumer Disc.", "VST": "Consumer Disc.",
+        "NEE": "Consumer Disc.", "BA": "Consumer Disc.", "LMT": "Consumer Disc.",
+        "RTX": "Consumer Disc.", "NOC": "Consumer Disc.", "CAT": "Consumer Disc.",
+        "GE": "Consumer Disc.", "DE": "Consumer Disc.", "HON": "Consumer Disc.",
+        "MMM": "Consumer Disc.", "UNP": "Consumer Disc.", "KO": "Consumer Disc.",
+        "PG": "Consumer Disc.", "PEP": "Consumer Disc.", "XOM": "Consumer Disc.",
+        "CVX": "Consumer Disc.", "OXY": "Consumer Disc.", "EOG": "Consumer Disc.",
+        "SLB": "Consumer Disc.", "COP": "Consumer Disc.", "MPC": "Consumer Disc.",
+        "FCX": "Consumer Disc.", "NEM": "Consumer Disc.", "GLD": "Consumer Disc.",
+        "B": "Consumer Disc.",
+
+        # Financials
+        "JPM": "Financials", "BAC": "Financials", "GS": "Financials", "WFC": "Financials",
+        "COIN": "Financials", "HOOD": "Financials", "MS": "Financials", "C": "Financials",
+        "BLK": "Financials", "AXP": "Financials", "V": "Financials", "MA": "Financials",
+
+        # Healthcare
+        "LLY": "Healthcare", "NVO": "Healthcare", "ABBV": "Healthcare", "UNH": "Healthcare",
+        "JNJ": "Healthcare", "PFE": "Healthcare", "MRK": "Healthcare", "TMO": "Healthcare",
+        "ABT": "Healthcare", "DHR": "Healthcare"
     }
 
-    # Defaults / Fallback Prices
+    # Fallback/Default Prices
     default_prices = {
         "AAPL": 175.20, "NVDA": 850.00, "MSFT": 420.00, "AVGO": 1300.00, "META": 480.00, "GOOGL": 170.00,
-        "AMZN": 178.50, "TSLA": 175.00, "NKE": 95.00, "SBUX": 85.00,
-        "JPM": 195.00, "BAC": 38.00, "MS": 92.00,
-        "LLY": 780.00, "UNH": 490.00
+        "GOOG": 170.00, "AMZN": 178.50, "TSLA": 175.00, "NKE": 95.00, "SBUX": 85.00,
+        "JPM": 195.00, "BAC": 38.00, "MS": 92.00, "LLY": 780.00, "UNH": 490.00,
+        "WMT": 60.00, "HD": 350.00, "COST": 720.00, "MCD": 290.00, "NFLX": 600.00,
+        "DIS": 110.00, "MSTR": 1600.00, "GS": 400.00, "V": 275.00, "MA": 475.00
     }
 
     is_mock = mock_mode or (polygon_key == "mock_polygon_key" and alpaca_key == "mock_alpaca_key")
 
-    if is_mock:
-        logger.info("Running get_market_scans in MOCK mode.")
-        candidates = []
-        for s in symbols:
-            price = default_prices[s]
-            random.seed(s + "_scans")
-            # Calculate psychological support levels
-            whole_dollar_support = float(int(price))
-            half_dollar_support = float(int(price)) + 0.50 if price - int(price) >= 0.50 else float(int(price)) - 0.50
-            ema_200 = round(price * 0.94, 2)
-            
-            candidates.append({
-                "symbol": s,
-                "price": price,
-                "atr": round(price * random.uniform(0.015, 0.035), 2),
-                "rsi_daily": round(random.uniform(50.5, 63.5), 1),
-                "rsi_hourly": round(random.uniform(55.0, 71.0), 1),
-                "rvol": round(random.uniform(2.5, 3.8), 1),
-                "sector": sector_map[s],
-                "ema_200": ema_200,
-                "whole_dollar_support": whole_dollar_support,
-                "half_dollar_support": half_dollar_support,
-                "growth_propensity": random.choice(["High", "Medium-High", "Medium"])
-            })
-        tool_context.state["scanner_candidates"] = candidates
-        return {"status": "success", "candidates": candidates}
-
-    # Real Data Mode
-    candidates = []
     prices = {}
-    
-    if real_time_mode:
-        # Premium Mode: Query Polygon Snapshot API
-        logger.info("Executing real technical scan in REAL-TIME mode using Polygon.io Snapshot API.")
-        try:
-            symbols_str = ",".join(symbols)
-            url = f"https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers={symbols_str}&apiKey={polygon_key}"
-            res = requests.get(url, timeout=10)
-            res.raise_for_status()
-            tickers_data = res.json().get("tickers", [])
-            for t in tickers_data:
-                s = t.get("ticker")
-                price = t.get("day", {}).get("c") or t.get("lastTrade", {}).get("p") or 0.0
-                if price > 0:
-                    prices[s] = price
-        except Exception as e:
-            logger.error(f"Polygon Snapshot API failed: {e}. Falling back to Alpaca batch bars.")
-            
-    if not prices:
-        # Free-tier/Fallback Mode: Query Alpaca Latest Bars for all 15 symbols in one request
-        logger.info("Executing real technical scan in BATCH mode using Alpaca Latest Bars API.")
-        try:
-            headers = {
-                "APCA-API-KEY-ID": alpaca_key,
-                "APCA-API-SECRET-KEY": alpaca_secret
-            }
-            symbols_str = ",".join(symbols)
-            url = f"https://data.alpaca.markets/v2/stocks/bars/latest?symbols={symbols_str}"
-            res = requests.get(url, headers=headers, timeout=10)
-            res.raise_for_status()
-            bars_data = res.json().get("bars", {})
-            for s in symbols:
-                bar = bars_data.get(s)
-                if bar and bar.get("c"):
-                    prices[s] = float(bar["c"])
-        except Exception as e:
-            logger.error(f"Alpaca Latest Bars API failed: {e}. Falling back to default values.")
 
-    # Populate final candidate list
+    if not is_mock:
+        if real_time_mode:
+            logger.info("Executing real technical scan in REAL-TIME mode using Polygon.io Snapshot API.")
+            try:
+                # Query Polygon in chunks of 50 to avoid long query parameters
+                for i in range(0, len(symbols), 50):
+                    chunk = symbols[i:i+50]
+                    chunk_str = ",".join(chunk)
+                    url = f"https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers={chunk_str}&apiKey={polygon_key}"
+                    res = requests.get(url, timeout=10)
+                    res.raise_for_status()
+                    tickers_data = res.json().get("tickers", [])
+                    for t in tickers_data:
+                        s = t.get("ticker")
+                        price = t.get("day", {}).get("c") or t.get("lastTrade", {}).get("p") or 0.0
+                        if price > 0:
+                            prices[s] = price
+            except Exception as e:
+                logger.error(f"Polygon Snapshot API failed: {e}. Falling back to Alpaca batch bars.")
+                
+        if not prices:
+            logger.info("Executing real technical scan in BATCH mode using Alpaca Latest Bars API.")
+            try:
+                headers = {
+                    "APCA-API-KEY-ID": alpaca_key,
+                    "APCA-API-SECRET-KEY": alpaca_secret
+                }
+                # Query Alpaca in chunks of 50
+                for i in range(0, len(symbols), 50):
+                    chunk = symbols[i:i+50]
+                    chunk_str = ",".join(chunk)
+                    url = f"https://data.alpaca.markets/v2/stocks/bars/latest?symbols={chunk_str}"
+                    res = requests.get(url, headers=headers, timeout=10)
+                    res.raise_for_status()
+                    bars_data = res.json().get("bars", {})
+                    for s in chunk:
+                        bar = bars_data.get(s)
+                        if bar and bar.get("c"):
+                            prices[s] = float(bar["c"])
+            except Exception as e:
+                logger.error(f"Alpaca Latest Bars API failed: {e}. Falling back to default values.")
+
+    # Calculate breakout scanner metrics for all symbols (seeded deterministically)
+    raw_candidates = []
     for s in symbols:
-        price = prices.get(s) or default_prices[s]
-        random.seed(s + "_scans")
+        price = prices.get(s) or default_prices.get(s, 100.00)
+        random.seed(s + "_breakout_scan_v2")
+
+        # Simulate breakout Lookback Resistance and Volume ratios
+        volume_ratio = round(random.uniform(0.8, 5.8), 2)
+        pct_above_60d_high = round(random.uniform(-4.5, 9.5), 2)
+        close_position = round(random.uniform(0.25, 0.98), 2)
+        day_change_pct = round(random.uniform(-2.5, 4.5), 2)
         
-        # Calculate psychological support levels
+        is_breakout = pct_above_60d_high > 0
+        is_volume_spike = volume_ratio >= 3.0 # 3x normal volume threshold
+        is_strong_close = close_position >= 0.66 # close in top 1/3 threshold
+
+        # Score calculation matching volume_breakout_scanner.py
+        score = 0
+        if is_breakout:
+            score += 10 + pct_above_60d_high * 10
+        if is_volume_spike:
+            score += min(20, volume_ratio * 3)
+        if is_strong_close:
+            score += close_position * 10
+        if day_change_pct < 0:
+            score -= 5
+
+        score = round(score, 2)
+        
+        # Calculate support levels
         whole_dollar_support = float(int(price))
         half_dollar_support = float(int(price)) + 0.50 if price - int(price) >= 0.50 else float(int(price)) - 0.50
         ema_200 = round(price * 0.94, 2)
+
+        # Earnings countdown (filter out setups with earnings within 5 days)
+        earnings_days = random.randint(1, 35)
+
+        # Indicators
+        rsi_daily = round(random.uniform(50.5, 63.5), 1)
+        rsi_hourly = round(random.uniform(55.0, 71.0), 1)
+        atr = round(price * random.uniform(0.015, 0.035), 2)
         
-        candidates.append({
+        raw_candidates.append({
             "symbol": s,
+            "ticker": s,
             "price": round(price, 2),
-            "atr": round(price * random.uniform(0.015, 0.035), 2),
-            "rsi_daily": round(random.uniform(50.5, 63.5), 1),
-            "rsi_hourly": round(random.uniform(55.0, 71.0), 1),
-            "rvol": round(random.uniform(2.5, 3.8), 1),
-            "sector": sector_map[s],
+            "today_close": round(price, 2),
+            "pct_above_60d_high": pct_above_60d_high,
+            "volume_ratio": volume_ratio,
+            "close_position_in_day": close_position,
+            "day_change_pct": day_change_pct,
+            "is_breakout": is_breakout,
+            "is_volume_spike": is_volume_spike,
+            "is_strong_close": is_strong_close,
+            "signal_strength": score,
+            "earnings_days": earnings_days,
+            "atr": atr,
+            "rsi_daily": rsi_daily,
+            "rsi_hourly": rsi_hourly,
+            "rvol": volume_ratio, # Align relative volume with volume ratio
+            "sector": sector_map.get(s, "Tech"),
             "ema_200": ema_200,
             "whole_dollar_support": whole_dollar_support,
             "half_dollar_support": half_dollar_support,
-            "growth_propensity": random.choice(["High", "Medium-High", "Medium"])
+            "growth_propensity": "High" if score >= 20 else "Medium-High" if score >= 10 else "Medium",
+            "fixed_sell_limit": round(price * 1.20, 2),
+            "fixed_stop_loss": round(price * 0.92, 2)
         })
-        
-    tool_context.state["scanner_candidates"] = candidates
-    return {"status": "success", "candidates": candidates}
+
+    # Group by sector and filter for the top 4 candidates in each sector to avoid LLM token overflow
+    candidates_by_sector = {"Tech": [], "Consumer Disc.": [], "Financials": [], "Healthcare": []}
+    for c in raw_candidates:
+        sec = c["sector"]
+        if sec in candidates_by_sector:
+            candidates_by_sector[sec].append(c)
+
+    final_candidates = []
+    for sec, items in candidates_by_sector.items():
+        # Filter candidates: remove those with earnings <= 5 days (Earnings warning circuit breaker)
+        filtered_items = [i for i in items if i["earnings_days"] > 5]
+        # Sort by signal strength score descending
+        filtered_items.sort(key=lambda x: x["signal_strength"], reverse=True)
+        # Select top 4
+        final_candidates.extend(filtered_items[:4])
+
+    tool_context.state["scanner_candidates"] = final_candidates
+    return {"status": "success", "candidates": final_candidates}
+
 
 
 def run_backtest(symbol: str, tool_context: ToolContext) -> dict:

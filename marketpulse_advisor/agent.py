@@ -29,12 +29,44 @@ logger = logging.getLogger("marketpulse_advisor.agent")
 
 # --- Custom LLM Wrapper to inject gcloud access token credentials ---
 class AuthedGemini(Gemini):
-    """Gemini wrapper that fetches user access token via gcloud CLI to bypass missing ADC."""
+    """Gemini wrapper supporting API keys, Application Default Credentials, and gcloud token fallbacks."""
     
     @cached_property
     def api_client(self) -> Client:
         try:
-            logger.info("Retrieving active gcloud credentials token for GenAI client...")
+            from .tools import reload_env
+            reload_env()
+        except Exception:
+            pass
+
+        # 1. Prioritize Developer API Key if present
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            logger.info("Initializing GenAI client using GEMINI_API_KEY.")
+            return Client(api_key=api_key)
+
+        # 2. Check if Application Default Credentials (ADC) are configured
+        adc_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        default_adc = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+        if adc_path or os.path.exists(default_adc):
+            logger.info("Initializing GenAI client using Application Default Credentials (ADC).")
+            return Client(
+                vertexai=True,
+                project=os.environ.get("GOOGLE_CLOUD_PROJECT", "rad-alm-test"),
+                location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+            )
+
+        # 3. Fallback to gcloud access token print
+        try:
+            logger.info("ADC/API key missing. Attempting user credentials token fetch via gcloud...")
+            logger.warning(
+                "*** WARNING: Falling back to 'gcloud auth print-access-token'. ***\n"
+                "Note that Vertex AI typically rejects personal user access tokens (resulting in "
+                "401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED).\n"
+                "To fix this, please run 'gcloud auth application-default login' in your terminal "
+                "to set up Application Default Credentials, or add your Google AI Studio developer "
+                "key 'GEMINI_API_KEY' to your .env file."
+            )
             token = subprocess.check_output(
                 ["gcloud", "auth", "print-access-token"], 
                 text=True
@@ -47,13 +79,53 @@ class AuthedGemini(Gemini):
                 credentials=creds
             )
         except Exception as e:
-            logger.warning(f"Could not retrieve gcloud credentials: {e}. Falling back to default auth.")
+            logger.warning(f"Could not retrieve gcloud credentials: {e}. Falling back to default ADK client.")
             return super().api_client
 
     @cached_property
     def _live_api_client(self) -> Client:
         try:
-            logger.info("Retrieving active gcloud credentials token for GenAI live client...")
+            from .tools import reload_env
+            reload_env()
+        except Exception:
+            pass
+
+        # 1. Prioritize Developer API Key
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            logger.info("Initializing GenAI live client using GEMINI_API_KEY.")
+            return Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(
+                    api_version=self._live_api_version,
+                )
+            )
+
+        # 2. Check if Application Default Credentials (ADC) are configured
+        adc_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        default_adc = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+        if adc_path or os.path.exists(default_adc):
+            logger.info("Initializing GenAI live client using Application Default Credentials (ADC).")
+            return Client(
+                vertexai=True,
+                project=os.environ.get("GOOGLE_CLOUD_PROJECT", "rad-alm-test"),
+                location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+                http_options=types.HttpOptions(
+                    api_version=self._live_api_version,
+                )
+            )
+
+        # 3. Fallback to gcloud access token print
+        try:
+            logger.info("ADC/API key missing. Attempting user credentials token fetch via gcloud...")
+            logger.warning(
+                "*** WARNING: Falling back to 'gcloud auth print-access-token'. ***\n"
+                "Note that Vertex AI typically rejects personal user access tokens (resulting in "
+                "401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED).\n"
+                "To fix this, please run 'gcloud auth application-default login' in your terminal "
+                "to set up Application Default Credentials, or add your Google AI Studio developer "
+                "key 'GEMINI_API_KEY' to your .env file."
+            )
             token = subprocess.check_output(
                 ["gcloud", "auth", "print-access-token"], 
                 text=True
@@ -69,8 +141,9 @@ class AuthedGemini(Gemini):
                 )
             )
         except Exception as e:
-            logger.warning(f"Could not retrieve live gcloud credentials: {e}. Falling back to default auth.")
+            logger.warning(f"Could not retrieve live gcloud credentials: {e}. Falling back to default ADK client.")
             return super()._live_api_client
+
 
 
 # Instantiate our authed model

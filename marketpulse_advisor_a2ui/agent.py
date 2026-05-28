@@ -32,12 +32,44 @@ logger = logging.getLogger("marketpulse_advisor.agent")
 
 # --- Custom LLM Wrapper to inject gcloud access token credentials ---
 class AuthedGemini(Gemini):
-    """Gemini wrapper that fetches user access token via gcloud CLI to bypass missing ADC."""
+    """Gemini wrapper supporting API keys, Application Default Credentials, and gcloud token fallbacks."""
     
     @cached_property
     def api_client(self) -> Client:
         try:
-            logger.info("Retrieving active gcloud credentials token for GenAI client...")
+            from .tools import reload_env
+            reload_env()
+        except Exception:
+            pass
+
+        # 1. Prioritize Developer API Key if present
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            logger.info("Initializing GenAI client using GEMINI_API_KEY.")
+            return Client(api_key=api_key)
+
+        # 2. Check if Application Default Credentials (ADC) are configured
+        adc_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        default_adc = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+        if adc_path or os.path.exists(default_adc):
+            logger.info("Initializing GenAI client using Application Default Credentials (ADC).")
+            return Client(
+                vertexai=True,
+                project=os.environ.get("GOOGLE_CLOUD_PROJECT", "rad-alm-test"),
+                location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+            )
+
+        # 3. Fallback to gcloud access token print
+        try:
+            logger.info("ADC/API key missing. Attempting user credentials token fetch via gcloud...")
+            logger.warning(
+                "*** WARNING: Falling back to 'gcloud auth print-access-token'. ***\n"
+                "Note that Vertex AI typically rejects personal user access tokens (resulting in "
+                "401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED).\n"
+                "To fix this, please run 'gcloud auth application-default login' in your terminal "
+                "to set up Application Default Credentials, or add your Google AI Studio developer "
+                "key 'GEMINI_API_KEY' to your .env file."
+            )
             token = subprocess.check_output(
                 ["gcloud", "auth", "print-access-token"], 
                 text=True
@@ -50,13 +82,53 @@ class AuthedGemini(Gemini):
                 credentials=creds
             )
         except Exception as e:
-            logger.warning(f"Could not retrieve gcloud credentials: {e}. Falling back to default auth.")
+            logger.warning(f"Could not retrieve gcloud credentials: {e}. Falling back to default ADK client.")
             return super().api_client
 
     @cached_property
     def _live_api_client(self) -> Client:
         try:
-            logger.info("Retrieving active gcloud credentials token for GenAI live client...")
+            from .tools import reload_env
+            reload_env()
+        except Exception:
+            pass
+
+        # 1. Prioritize Developer API Key
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            logger.info("Initializing GenAI live client using GEMINI_API_KEY.")
+            return Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(
+                    api_version=self._live_api_version,
+                )
+            )
+
+        # 2. Check if Application Default Credentials (ADC) are configured
+        adc_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        default_adc = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+        if adc_path or os.path.exists(default_adc):
+            logger.info("Initializing GenAI live client using Application Default Credentials (ADC).")
+            return Client(
+                vertexai=True,
+                project=os.environ.get("GOOGLE_CLOUD_PROJECT", "rad-alm-test"),
+                location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+                http_options=types.HttpOptions(
+                    api_version=self._live_api_version,
+                )
+            )
+
+        # 3. Fallback to gcloud access token print
+        try:
+            logger.info("ADC/API key missing. Attempting user credentials token fetch via gcloud...")
+            logger.warning(
+                "*** WARNING: Falling back to 'gcloud auth print-access-token'. ***\n"
+                "Note that Vertex AI typically rejects personal user access tokens (resulting in "
+                "401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED).\n"
+                "To fix this, please run 'gcloud auth application-default login' in your terminal "
+                "to set up Application Default Credentials, or add your Google AI Studio developer "
+                "key 'GEMINI_API_KEY' to your .env file."
+            )
             token = subprocess.check_output(
                 ["gcloud", "auth", "print-access-token"], 
                 text=True
@@ -72,8 +144,9 @@ class AuthedGemini(Gemini):
                 )
             )
         except Exception as e:
-            logger.warning(f"Could not retrieve live gcloud credentials: {e}. Falling back to default auth.")
+            logger.warning(f"Could not retrieve live gcloud credentials: {e}. Falling back to default ADK client.")
             return super()._live_api_client
+
 
 
 # Instantiate our authed model
@@ -131,13 +204,16 @@ risk_advisor_agent = Agent(
         "6. Audit Catalysts & Tape Confirmation:\n"
         "   - Check for recent news catalysts (earnings, contract wins, mergers, etc.) from `get_stock_catalyst_news`. If a stock has NO clear catalysts, append a warning that it has a high risk of 'fading' or performing a 'round trip' back to entry, and downgrade its growth propensity.\n"
         "   - Confirm entries using Tape Sentiment from `get_tape_and_depth_sentiment`. Only stocks showing 'Green Tape (Aggressive Buying)' indicate immediate buying pressure for entry.\n"
-        "7. Support-Based Risk-of-Ruin Sizing:\n"
-        "   - Determine the nearest Support Level (thedaily 200 EMA support or the psychological whole/half-dollar support level that lies below current price).\n"
+        "7. Support-Based Risk-of-Ruin Sizing & Secondary Target Comparison:\n"
+        "   - Determine the nearest Support Level (the daily 200 EMA support or the psychological whole/half-dollar support level that lies below current price).\n"
         "   - For beginner traders (e.g. user_happy), calculate a Pullback Entry Price (Pe) at a 1.5% discount from the current price, and align it directly with this Support Level.\n"
         "   - Place the Stop-Loss (Ps) tightly below this support level (e.g., $0.20 below support) to minimize losses if support breaches.\n"
         "   - Calculate the Take-Profit Target (Pt) to enforce a strict, disciplined profit-to-loss ratio of at least 1:3 relative to the entry and tight stop-loss (Pt = Pe + 3.0 * (Pe - Ps)).\n"
         "   - Calculate custom share size S = (E * R) / (Pe - Ps).\n"
-        "   - For beginners, cap the recommended share count at a maximum of 10 shares or $1,000 order value to condition against emotional triggers like fear and FOMO.\n\n"
+        "   - For beginners, cap the recommended share count at a maximum of 10 shares or $1,000 order value to condition against fear and FOMO.\n"
+        "   - Compare these primary support-based targets with the secondary fixed OCO targets from the script: Sell Target at +20% and Stop-Loss at -8% from the current price (e.g., fixed_sell_limit and fixed_stop_loss properties on candidate data).\n"
+        "8. Sorting & Ranking:\n"
+        "   - Order/sort candidates under each sector tab in descending order of their `signal_strength` score (higher score = stronger setup).\n\n"
         "IMPORTANT RULES FOR A2UI GENERATION:\n"
         "You MUST separate your conversational response from your A2UI JSON output using the delimiter '---a2ui_JSON---'.\n"
         "The JSON MUST be a single object wrapping a list of A2UI messages under a top-level \"a2ui_messages\" key.\n"
@@ -208,7 +284,7 @@ risk_advisor_agent = Agent(
         "            \"id\": \"tech_column\",\n"
         "            \"component\": {\n"
         "              \"Column\": {\n"
-        "                \"children\": { \"explicitList\": [\"AAPL_card\", \"NVDA_card\", \"MSFT_card\", \"AVGO_card\", \"META_card\", \"GOOGL_card\"] }\n"
+        "                \"children\": { \"explicitList\": [\"AAPL_card\", \"NVDA_card\", \"MSFT_card\", \"AVGO_card\"] }\n"
         "              }\n"
         "            }\n"
         "          },\n"
@@ -247,7 +323,7 @@ risk_advisor_agent = Agent(
         "            \"component\": {\n"
         "              \"Column\": {\n"
         "                \"children\": {\n"
-        "                  \"explicitList\": [\"AAPL_title\", \"AAPL_status\", \"AAPL_strategy\", \"AAPL_patterns\", \"AAPL_risk\", \"AAPL_news\", \"AAPL_btn\"]\n"
+        "                  \"explicitList\": [\"AAPL_title\", \"AAPL_status\", \"AAPL_strategy\", \"AAPL_metrics\", \"AAPL_patterns\", \"AAPL_risk\", \"AAPL_fixed_oco\", \"AAPL_news\", \"AAPL_btn\"]\n"
         "                }\n"
         "              }\n"
         "            }\n"
@@ -256,7 +332,7 @@ risk_advisor_agent = Agent(
         "            \"id\": \"AAPL_title\",\n"
         "            \"component\": {\n"
         "              \"Text\": {\n"
-        "                \"text\": { \"literalString\": \"AAPL - Apple Inc.\" },\n"
+        "                \"text\": { \"literalString\": \"AAPL - Apple Inc. (Score: 23.5)\" },\n"
         "                \"usageHint\": \"h3\"\n"
         "              }\n"
         "            }\n"
@@ -273,7 +349,15 @@ risk_advisor_agent = Agent(
         "            \"id\": \"AAPL_strategy\",\n"
         "            \"component\": {\n"
         "              \"Text\": {\n"
-        "                \"text\": { \"literalString\": \"Strategy: Bollinger Band Squeeze Breakout\" }\n"
+        "                \"text\": { \"literalString\": \"Strategy: Volume Breakout Squeeze\" }\n"
+        "              }\n"
+        "            }\n"
+        "          },\n"
+        "          {\n"
+        "            \"id\": \"AAPL_metrics\",\n"
+        "            \"component\": {\n"
+        "              \"Text\": {\n"
+        "                \"text\": { \"literalString\": \"Breakout Metrics: Breakout: +3.2%, Vol Ratio: 4.10x, Close Pos: 0.85, Earnings: 12 days\" }\n"
         "              }\n"
         "            }\n"
         "          },\n"
@@ -281,7 +365,7 @@ risk_advisor_agent = Agent(
         "            \"id\": \"AAPL_patterns\",\n"
         "            \"component\": {\n"
         "              \"Text\": {\n"
-        "                \"text\": { \"literalString\": \"Setup Patterns: RSI Daily: 54.2, Hourly: 62.1, RVOL: 2.8, Tape: Green Tape (Aggressive Buying)\" }\n"
+        "                \"text\": { \"literalString\": \"Setup Patterns: RSI Daily: 54.2, Hourly: 62.1, RVOL: 4.1, Tape: Green Tape (Aggressive Buying)\" }\n"
         "              }\n"
         "            }\n"
         "          },\n"
@@ -289,7 +373,15 @@ risk_advisor_agent = Agent(
         "            \"id\": \"AAPL_risk\",\n"
         "            \"component\": {\n"
         "              \"Text\": {\n"
-        "                \"text\": { \"literalString\": \"Risk Management: Current Price: 175.20, Pullback Entry: 174.50, Stop-Loss: 174.30, Take-Profit: 175.10, Sized Shares: 5, Drawdown Scaling: Scaled down (1.0% -> 0.5%)\" }\n"
+        "                \"text\": { \"literalString\": \"Primary Risk Sizing: Current Price: 175.20, Pullback Entry: 174.50, Stop-Loss: 174.30, Take-Profit: 175.10, Sized Shares: 5, Drawdown Scaling: Scaled down (1.0% -> 0.5%)\" }\n"
+        "              }\n"
+        "            }\n"
+        "          },\n"
+        "          {\n"
+        "            \"id\": \"AAPL_fixed_oco\",\n"
+        "            \"component\": {\n"
+        "              \"Text\": {\n"
+        "                \"text\": { \"literalString\": \"Secondary Fixed OCO Bracket: Sell Limit: 209.40 (+20%), Stop Loss: 160.54 (-8%)\" }\n"
         "              }\n"
         "            }\n"
         "          },\n"
@@ -334,7 +426,7 @@ risk_advisor_agent = Agent(
         "  ]\n"
         "}\n"
         "```\n"
-        "Generate this layout for all 15 symbols, grouping them under the correct Sector Tabs. Render 'Approved' status only for stocks passing safety checks, and add a warning to the safety status if daily loss limit or other warning thresholds are breached. Double check that every component has a unique id, and matches the correct schema properties (e.g. Button contains a 'child' component ID and 'action', and Cards contain exactly one 'child' ID)."
+        "Generate this layout for the candidate symbols, grouping them under the correct Sector Tabs, ranking them descending by their signal_strength score. Render 'Approved' status only for stocks passing safety checks, and add a warning to the safety status if daily loss limit or other warning thresholds are breached. Double check that every component has a unique id, and matches the correct schema properties (e.g. Button contains a 'child' component ID and 'action', and Cards contain exactly one 'child' ID). IMPORTANT: For any Text component, the usageHint property MUST only be one of the following exact strings: 'h1', 'h2', 'h3', 'h4', 'h5', 'caption', 'body'. Do NOT use 'body1' or any other value, as this violates the schema."
     ),
 
     tools=[get_portfolio_data, get_recent_policy_news, get_stock_catalyst_news, get_tape_and_depth_sentiment]
@@ -369,15 +461,18 @@ root_agent = Agent(
         "- Surface ID: 'main', Root: 'root_column'.\n"
         "- 'root_column' is a Column containing: ['title_text', 'divider_1', 'feed_badge', 'tabs_container'].\n"
         "- 'tabs_container' is a Tabs component with tab items: 'Tech', 'Consumer Disc.', 'Financials', and 'Healthcare'.\n"
-        "- Under each tab, display the stock cards for that sector, each rendering a Column displaying:\n"
-        "  1. Symbol Name (Text, h3)\n"
+        "- Under each tab, display the stock cards for that sector (ranked descending by signal_strength score), each rendering a Column displaying:\n"
+        "  1. Symbol Name with Score (Text, h3)\n"
         "  2. Safety Status: 'Approved' or 'Discarded' (Text)\n"
-        "  3. Strategy details (Breakout vs Pullback) (Text)\n"
-        "  4. Setup Patterns (BB, RSI, RVOL, Tape Sentiment) (Text)\n"
-        "  5. Risk Management (Price, support stop-loss, 1:3 take-profit, shares, drawdown scaling) (Text)\n"
-        "  6. News Catalysts & Trump sentiment (Text)\n"
-        "  7. Buy Button: for approved stocks executing 'submit_bracket_order' userAction.\n"
-        "- Keep A2UI components capitalized correctly: Column, Row, Card, Tabs, Button, Text, Divider."
+        "  3. Strategy details (Volume Breakout Squeeze vs Pullback) (Text)\n"
+        "  4. Breakout Metrics (Breakout %, Vol Ratio, Close Position, Earnings Countdown) (Text)\n"
+        "  5. Setup Patterns (RSI daily/hourly, RVOL, Tape Sentiment) (Text)\n"
+        "  6. Primary Support-Based Risk Sizing (Current price, pullback entry price, stop-loss, take-profit, shares, drawdown scaling) (Text)\n"
+        "  7. Secondary Fixed OCO Targets (-8% Stop-Loss / +20% Take-Profit) (Text)\n"
+        "  8. News Catalysts & Trump sentiment (Text)\n"
+        "  9. Buy Button: for approved stocks executing 'submit_bracket_order' userAction.\n"
+        "- Keep A2UI components capitalized correctly: Column, Row, Card, Tabs, Button, Text, Divider.\n"
+        "IMPORTANT: For any Text component, the usageHint property MUST only be one of the following exact strings: 'h1', 'h2', 'h3', 'h4', 'h5', 'caption', 'body'. Do NOT use 'body1' or any other value, as this violates the schema."
     ),
     tools=[submit_bracket_order],
     sub_agents=[premarket_workflow]

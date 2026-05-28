@@ -763,7 +763,6 @@
                         rawText = dataModel[comp.Text.text.path] || "";
                     }
                 }
-                el.innerText = rawText;
                 
                 // Set usageHint styling
                 const hint = comp.Text.usageHint || 'body';
@@ -794,6 +793,110 @@
                     el.style.fontSize = '0.9rem';
                     el.style.lineHeight = '1.4';
                 }
+
+                // Premium parser for financial card details
+                if (rawText.startsWith("Safety Status:")) {
+                    const status = rawText.replace("Safety Status:", "").trim();
+                    if (status.toLowerCase().includes("approved")) {
+                        el.innerHTML = `<span style="font-weight: 500; color: var(--text-muted); font-size: 0.85rem;">Safety Status:</span> <span class="badge badge-success pulse"><span class="material-icons" style="font-size: 0.85rem; margin-right: 4px; vertical-align: middle;">check_circle</span>Approved</span>`;
+                    } else {
+                        el.innerHTML = `<span style="font-weight: 500; color: var(--text-muted); font-size: 0.85rem;">Safety Status:</span> <span class="badge badge-danger"><span class="material-icons" style="font-size: 0.85rem; margin-right: 4px; vertical-align: middle;">warning</span>${status}</span>`;
+                    }
+                } else if (rawText.startsWith("Strategy:")) {
+                    const strategy = rawText.replace("Strategy:", "").trim();
+                    el.innerHTML = `<span style="font-weight: 500; color: var(--text-muted); font-size: 0.85rem;">Strategy:</span> <span style="color: var(--primary-hover); font-weight: 600; background: rgba(59, 130, 246, 0.1); padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; border: 1px solid rgba(59, 130, 246, 0.2);">${strategy}</span>`;
+                } else if (rawText.startsWith("Breakout Metrics:")) {
+                    const metrics = rawText.replace("Breakout Metrics:", "").trim();
+                    const parts = metrics.split(",").map(p => p.trim());
+                    let html = `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0;">`;
+                    parts.forEach(p => {
+                        const splitIdx = p.indexOf(":");
+                        if (splitIdx > 0) {
+                            const label = p.substring(0, splitIdx).trim();
+                            const val = p.substring(splitIdx + 1).trim();
+                            let icon = "trending_up";
+                            if (label.toLowerCase().includes("vol")) icon = "bar_chart";
+                            else if (label.toLowerCase().includes("close")) icon = "vertical_align_top";
+                            else if (label.toLowerCase().includes("earnings")) icon = "event";
+                            
+                            html += `<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 12px; display: flex; flex-direction: column; min-width: 95px; flex-grow: 1;">
+                                <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 4px;"><span class="material-icons" style="font-size: 0.8rem;">${icon}</span>${label}</span>
+                                <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-color); margin-top: 2px;">${val}</span>
+                            </div>`;
+                        }
+                    });
+                    html += `</div>`;
+                    el.innerHTML = html;
+                } else if (rawText.startsWith("Setup Patterns:")) {
+                    const patterns = rawText.replace("Setup Patterns:", "").trim();
+                    const parts = patterns.split(",").map(p => p.trim());
+                    let html = `<div style="font-size: 0.85rem; background: rgba(0, 0, 0, 0.15); border-radius: 8px; padding: 10px; border: 1px solid var(--card-border); margin: 6px 0;">
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Setup Confirmation Indicators</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px;">`;
+                    parts.forEach(p => {
+                        const splitIdx = p.indexOf(":");
+                        if (splitIdx > 0) {
+                            const label = p.substring(0, splitIdx).trim();
+                            const val = p.substring(splitIdx + 1).trim();
+                            let color = "var(--text-color)";
+                            if (val.toLowerCase().includes("green") || val.toLowerCase().includes("buying")) color = "var(--success)";
+                            else if (val.toLowerCase().includes("red") || val.toLowerCase().includes("selling")) color = "var(--danger)";
+                            html += `<div><span style="color: var(--text-muted);">${label}:</span> <span style="font-weight: 600; color: ${color};">${val}</span></div>`;
+                        }
+                    });
+                    html += `</div></div>`;
+                    el.innerHTML = html;
+                } else if (rawText.startsWith("Primary Risk Sizing:") || rawText.startsWith("Primary Support-Based Sizing:")) {
+                    const labelStr = rawText.startsWith("Primary Risk Sizing:") ? "Primary Risk Sizing:" : "Primary Support-Based Sizing:";
+                    const risk = rawText.replace(labelStr, "").trim();
+                    const parts = risk.split(",").map(p => p.trim());
+                    
+                    let html = `<div style="font-size: 0.85rem; border-left: 3px solid var(--success); padding-left: 10px; margin: 8px 0;">
+                        <div style="font-weight: 600; color: var(--success); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Primary Support-Based Strategy</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;">`;
+                    parts.forEach(p => {
+                        const splitIdx = p.indexOf(":");
+                        if (splitIdx > 0) {
+                            const label = p.substring(0, splitIdx).trim();
+                            const val = p.substring(splitIdx + 1).trim();
+                            let valColor = "var(--text-color)";
+                            if (label.toLowerCase().includes("stop")) valColor = "var(--danger)";
+                            else if (label.toLowerCase().includes("profit") || label.toLowerCase().includes("entry")) valColor = "var(--success)";
+                            html += `<div><span style="color: var(--text-muted); font-size: 0.75rem;">${label}:</span><br><span style="font-weight: 600; color: ${valColor}; font-size: 0.9rem;">${val}</span></div>`;
+                        }
+                    });
+                    html += `</div></div>`;
+                    el.innerHTML = html;
+                } else if (rawText.startsWith("Secondary Fixed OCO Bracket:")) {
+                    const fixed = rawText.replace("Secondary Fixed OCO Bracket:", "").trim();
+                    const parts = fixed.split(",").map(p => p.trim());
+                    
+                    let html = `<div style="font-size: 0.85rem; border-left: 3px solid var(--text-muted); padding-left: 10px; margin: 8px 0; background: rgba(255, 255, 255, 0.01); border-radius: 0 8px 8px 0;">
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Secondary Fixed OCO Bracket (Reference)</div>
+                        <div style="display: flex; gap: 16px;">`;
+                    parts.forEach(p => {
+                        const splitIdx = p.indexOf(":");
+                        if (splitIdx > 0) {
+                            const label = p.substring(0, splitIdx).trim();
+                            const val = p.substring(splitIdx + 1).trim();
+                            html += `<div><span style="color: var(--text-muted); font-size: 0.75rem;">${label}:</span> <span style="font-weight: 500; color: var(--text-color);">${val}</span></div>`;
+                        }
+                    });
+                    html += `</div></div>`;
+                    el.innerHTML = html;
+                } else if (rawText.startsWith("News Catalysts:")) {
+                    const news = rawText.replace("News Catalysts:", "").trim();
+                    el.innerHTML = `<div style="margin: 6px 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+                        <span style="font-weight: 600; color: var(--text-color); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Catalysts & Market Policy Sentiment</span>
+                        <div style="display: flex; align-items: flex-start; gap: 6px;">
+                            <span class="material-icons" style="font-size: 1.05rem; color: var(--warning); margin-top: 2px;">newspaper</span>
+                            <span>${news}</span>
+                        </div>
+                    </div>`;
+                } else {
+                    el.innerText = rawText;
+                }
+
                 return el;
             }
             
