@@ -75,25 +75,31 @@ def get_market_scans(tool_context: ToolContext) -> dict:
     real_time_mode = os.environ.get("REAL_TIME_MODE", "false").lower() == "true"
     mock_mode = os.environ.get("MOCK_MODE", "True").lower() == "true"
 
-    # The 77 symbols from volume_breakout_scanner.py
-    symbols = [
-        "NVDA", "MSFT", "GOOG", "GOOGL", "META", "AAPL", "AMZN", "TSLA", "AVGO", "ORCL",
-        "MU", "MRVL", "AMD", "ALAB", "CRDO", "ANET", "TSM", "ASML", "QCOM", "TXN", "INTC",
-        "DDOG", "SNOW", "CRWD", "PLTR", "ZS", "NET", "MDB", "NOW", "ADBE", "INTU",
-        "NFLX", "DIS", "ROKU", "JPM", "BAC", "GS", "WFC", "COIN", "HOOD", "MS", "C",
-        "BLK", "AXP", "V", "MA", "BA", "LMT", "RTX", "NOC", "CAT", "GE", "DE", "HON",
-        "MMM", "UNP", "XOM", "CVX", "OXY", "EOG", "SLB", "COP", "MPC", "LLY", "NVO",
-        "ABBV", "UNH", "JNJ", "PFE", "MRK", "TMO", "ABT", "DHR", "WMT", "HD", "COST",
-        "MCD", "NKE", "TGT", "SBUX", "LOW", "KO", "PG", "PEP", "GEV", "CEG", "VST",
-        "NEE", "MSTR", "MARA", "RIOT", "FCX", "NEM", "GLD", "B", "UBER", "LYFT",
-        "DAL", "RCL"
-    ]
+    # 1. Check for custom user-defined symbols from .env
+    custom_symbols_str = os.environ.get("CUSTOM_SYMBOLS", "").strip()
+    if custom_symbols_str:
+        logger.info(f"Using custom scanner symbols: {custom_symbols_str}")
+        symbols = [s.strip().upper() for s in custom_symbols_str.split(",") if s.strip()]
+    else:
+        # Default 77 symbols from volume_breakout_scanner.py
+        symbols = [
+            "NVDA", "MSFT", "GOOG", "GOOGL", "META", "AAPL", "AMZN", "TSLA", "AVGO", "ORCL",
+            "MU", "MRVL", "AMD", "ALAB", "CRDO", "ANET", "TSM", "ASML", "QCOM", "TXN", "INTC",
+            "DDOG", "SNOW", "CRWD", "PLTR", "ZS", "NET", "MDB", "NOW", "ADBE", "INTU",
+            "NFLX", "DIS", "ROKU", "JPM", "BAC", "GS", "WFC", "COIN", "HOOD", "MS", "C",
+            "BLK", "AXP", "V", "MA", "BA", "LMT", "RTX", "NOC", "CAT", "GE", "DE", "HON",
+            "MMM", "UNP", "XOM", "CVX", "OXY", "EOG", "SLB", "COP", "MPC", "LLY", "NVO",
+            "ABBV", "UNH", "JNJ", "PFE", "MRK", "TMO", "ABT", "DHR", "WMT", "HD", "COST",
+            "MCD", "NKE", "TGT", "SBUX", "LOW", "KO", "PG", "PEP", "GEV", "CEG", "VST",
+            "NEE", "MSTR", "MARA", "RIOT", "FCX", "NEM", "GLD", "B", "UBER", "LYFT",
+            "DAL", "RCL"
+        ]
     # Remove duplicates
     symbols = list(sorted(list(set(symbols))))
 
-    # Dynamic Sector mapping to our 4 tabs
+    # Dynamic Sector mapping to our 4 tabs (expanded with volatile/low-profile stocks)
     sector_map = {
-        # Tech
+        # Tech / Crypto Miners
         "NVDA": "Tech", "MSFT": "Tech", "GOOG": "Tech", "GOOGL": "Tech", "META": "Tech",
         "AAPL": "Tech", "AMZN": "Tech", "TSLA": "Tech", "AVGO": "Tech", "ORCL": "Tech",
         "MU": "Tech", "MRVL": "Tech", "AMD": "Tech", "ALAB": "Tech", "CRDO": "Tech",
@@ -101,9 +107,11 @@ def get_market_scans(tool_context: ToolContext) -> dict:
         "INTC": "Tech", "DDOG": "Tech", "SNOW": "Tech", "CRWD": "Tech", "PLTR": "Tech",
         "ZS": "Tech", "NET": "Tech", "MDB": "Tech", "NOW": "Tech", "ADBE": "Tech",
         "INTU": "Tech", "NFLX": "Tech", "DIS": "Tech", "ROKU": "Tech", "MSTR": "Tech",
-        "MARA": "Tech", "RIOT": "Tech",
+        "MARA": "Tech", "RIOT": "Tech", "SMCI": "Tech", "CLSK": "Tech", "HUT": "Tech",
+        "WULF": "Tech", "SOUN": "Tech", "BBAI": "Tech", "CIFR": "Tech", "UPST": "Tech",
+        "SOFI": "Tech",
         
-        # Consumer Disc
+        # Consumer Disc / High Propensity Mid-Caps
         "WMT": "Consumer Disc.", "HD": "Consumer Disc.", "COST": "Consumer Disc.",
         "MCD": "Consumer Disc.", "NKE": "Consumer Disc.", "TGT": "Consumer Disc.",
         "SBUX": "Consumer Disc.", "LOW": "Consumer Disc.", "UBER": "Consumer Disc.",
@@ -117,17 +125,18 @@ def get_market_scans(tool_context: ToolContext) -> dict:
         "CVX": "Consumer Disc.", "OXY": "Consumer Disc.", "EOG": "Consumer Disc.",
         "SLB": "Consumer Disc.", "COP": "Consumer Disc.", "MPC": "Consumer Disc.",
         "FCX": "Consumer Disc.", "NEM": "Consumer Disc.", "GLD": "Consumer Disc.",
-        "B": "Consumer Disc.",
-
+        "B": "Consumer Disc.", "CVNA": "Consumer Disc.", "GCT": "Consumer Disc.",
+ 
         # Financials
         "JPM": "Financials", "BAC": "Financials", "GS": "Financials", "WFC": "Financials",
         "COIN": "Financials", "HOOD": "Financials", "MS": "Financials", "C": "Financials",
         "BLK": "Financials", "AXP": "Financials", "V": "Financials", "MA": "Financials",
 
-        # Healthcare
+        # Healthcare / Biotech
         "LLY": "Healthcare", "NVO": "Healthcare", "ABBV": "Healthcare", "UNH": "Healthcare",
         "JNJ": "Healthcare", "PFE": "Healthcare", "MRK": "Healthcare", "TMO": "Healthcare",
-        "ABT": "Healthcare", "DHR": "Healthcare"
+        "ABT": "Healthcare", "DHR": "Healthcare", "SAVA": "Healthcare", "VKTX": "Healthcare",
+        "ALT": "Healthcare", "CYTO": "Healthcare"
     }
 
     # Fallback/Default Prices
